@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d2818" />
+  <title>Boerenbridge</title>
+
+  <!-- Google Fonts: Playfair Display (display) + DM Sans (body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="dark-mode">
+
+  <!-- ═══════════════════════════════════════════════
+       HEADER (altijd zichtbaar)
+  ═══════════════════════════════════════════════ -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-suit">♠</span>
+        <span class="logo-text">Boerenbridge</span>
+        <span class="logo-suit">♥</span>
+      </div>
+      <div class="header-controls">
+        <button id="btn-dark-mode" class="icon-btn" aria-label="Wissel dark/light mode" title="Wissel thema">
+          <span class="icon-moon">☾</span>
+        </button>
+        <button id="btn-home" class="icon-btn" aria-label="Terug naar lobby" title="Terug naar lobby" style="display:none;">
+          <span>⌂</span>
+        </button>
+      </div>
+    </div>
+    <!-- Progress bar voor huidige ronde -->
+    <div class="round-progress-bar" id="round-progress-bar" style="display:none;">
+      <div class="round-progress-fill" id="round-progress-fill"></div>
+      <span class="round-progress-label" id="round-progress-label">Ronde 1 / 15</span>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════
+       TOAST NOTIFICATIONS
+  ═══════════════════════════════════════════════ -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- ═══════════════════════════════════════════════
+       LOADING OVERLAY
+  ═══════════════════════════════════════════════ -->
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="loading-spinner">
+      <span class="spin-suit">♠</span>
+    </div>
+    <p>Laden…</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       VIEW 1: LOBBY
+       - Spelers zoeken / toevoegen
+       - Volgorde aanpassen
+       - Spel starten
+  ═══════════════════════════════════════════════ -->
+  <main id="view-lobby" class="view active">
+    <div class="view-container">
+      <h1 class="view-title">Nieuw Spel</h1>
+      <p class="view-subtitle">Selecteer 2–7 spelers om te beginnen</p>
+
+      <!-- Speler zoeken / toevoegen -->
+      <section class="card-panel">
+        <h2 class="panel-title">Spelers toevoegen</h2>
+        <div class="search-row">
+          <div class="search-input-wrap">
+            <input
+              type="text"
+              id="player-search-input"
+              class="search-input"
+              placeholder="Zoek of typ nieuwe naam…"
+              autocomplete="off"
+              aria-label="Zoek speler"
+            />
+            <div id="player-autocomplete" class="autocomplete-dropdown" role="listbox" aria-label="Gevonden spelers"></div>
+          </div>
+          <button id="btn-add-player" class="btn btn-primary" aria-label="Speler toevoegen">
+            + Toevoegen
+          </button>
+        </div>
+        <p class="hint" id="add-player-hint"></p>
+      </section>
+
+      <!-- Geselecteerde spelers (volgorde aanpassen) -->
+      <section class="card-panel" id="selected-players-panel" style="display:none;">
+        <h2 class="panel-title">Spelersvolgorde
+          <span class="badge" id="player-count-badge">0</span>
+        </h2>
+        <p class="hint">Pas de volgorde aan met de pijltjes. De eerste speler begint ronde 1.</p>
+        <ul id="selected-players-list" class="player-list" role="list"></ul>
+      </section>
+
+      <!-- Start knop -->
+      <div class="action-row">
+        <button id="btn-start-game" class="btn btn-gold btn-large" disabled aria-label="Spel starten">
+          Spel Starten ♦
+        </button>
+      </div>
+
+      <!-- Navigatie naar statistieken -->
+      <div class="action-row">
+        <button id="btn-show-stats" class="btn btn-ghost" aria-label="Bekijk statistieken">
+          📊 Statistieken & Records
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ═══════════════════════════════════════════════
+       VIEW 2: BIEDEN
+       - Number pads per speler
+       - Live totaal teller
+       - Dealer beperking zichtbaar
+  ═══════════════════════════════════════════════ -->
+  <main id="view-bidding" class="view">
+    <div class="view-container">
+      <div class="round-info-bar" id="bidding-round-info">
+        <div class="round-info-item">
+          <span class="info-label">Ronde</span>
+          <span class="info-value" id="bid-round-number">1</span>
+        </div>
+        <div class="round-info-item">
+          <span class="info-label">Kaarten</span>
+          <span class="info-value" id="bid-cards-count">1</span>
+        </div>
+        <div class="round-info-item">
+          <span class="info-label">Totaal geboden</span>
+          <span class="info-value" id="bid-total-display">0</span>
+        </div>
+      </div>
+
+      <!-- Waarschuwing bij dealer beperking -->
+      <div id="dealer-restriction-warning" class="alert alert-warning" style="display:none;">
+        <span class="alert-icon">⚠</span>
+        <span id="dealer-restriction-text">Als laatste bieder mag je niet <strong id="forbidden-bid-value">X</strong> bieden.</span>
+      </div>
+
+      <div id="bidding-players-container" class="bidding-grid">
+        <!-- Dynamisch gegenereerd per speler -->
+      </div>
+
+      <div class="action-row">
+        <button id="btn-confirm-bids" class="btn btn-gold btn-large" disabled aria-label="Biedingen bevestigen">
+          Biedingen Bevestigen →
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ═══════════════════════════════════════════════
+       VIEW 3: RESULTATEN INVOEREN
+       - Slagen invoeren per speler
+       - Validatie: som = kaarten
+  ═══════════════════════════════════════════════ -->
+  <main id="view-results" class="view">
+    <div class="view-container">
+      <div class="round-info-bar">
+        <div class="round-info-item">
+          <span class="info-label">Ronde</span>
+          <span class="info-value" id="res-round-number">1</span>
+        </div>
+        <div class="round-info-item">
+          <span class="info-label">Kaarten</span>
+          <span class="info-value" id="res-cards-count">1</span>
+        </div>
+        <div class="round-info-item">
+          <span class="info-label">Ingevoerd</span>
+          <span class="info-value" id="res-total-display">0 / 1</span>
+        </div>
+      </div>
+
+      <div id="results-players-container" class="results-grid">
+        <!-- Dynamisch gegenereerd per speler -->
+      </div>
+
+      <!-- Validatiebericht -->
+      <div id="results-validation-msg" class="alert" style="display:none;"></div>
+
+      <div class="action-row">
+        <button id="btn-save-round" class="btn btn-gold btn-large" disabled aria-label="Ronde opslaan">
+          Ronde Opslaan ✓
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ═══════════════════════════════════════════════
+       VIEW 4: SCOREBORD
+       - Tussenstand tabel
+       - Edit-modus voor correcties
+       - Doorgaan naar volgende ronde
+  ═══════════════════════════════════════════════ -->
+  <main id="view-scoreboard" class="view">
+    <div class="view-container view-container--wide">
+      <div class="scoreboard-header">
+        <h1 class="view-title" id="scoreboard-title">Scorebord</h1>
+        <div class="scoreboard-controls">
+          <button id="btn-toggle-edit" class="btn btn-ghost btn-sm" aria-label="Bewerk modus aan/uit">
+            ✏ Bewerken
+          </button>
+        </div>
+      </div>
+
+      <!-- Edit modus banner -->
+      <div id="edit-mode-banner" class="alert alert-info" style="display:none;">
+        <span class="alert-icon">✏</span>
+        Klik op een bod of resultaat in de tabel om te corrigeren. Alle volgende scores worden herberekend.
+      </div>
+
+      <!-- Scorebord tabel (horizontaal scrollbaar) -->
+      <div class="scoreboard-scroll-wrapper">
+        <table id="scoreboard-table" class="scoreboard-table">
+          <thead id="scoreboard-thead"></thead>
+          <tbody id="scoreboard-tbody"></tbody>
+          <tfoot id="scoreboard-tfoot"></tfoot>
+        </table>
+      </div>
+
+      <!-- Actie knoppen -->
+      <div class="action-row" id="scoreboard-actions">
+        <button id="btn-next-round" class="btn btn-gold btn-large" aria-label="Volgende ronde">
+          Volgende Ronde →
+        </button>
+        <button id="btn-finish-game" class="btn btn-gold btn-large" style="display:none;" aria-label="Spel afsluiten">
+          🏆 Eindstand Bekijken
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ═══════════════════════════════════════════════
+       VIEW 5: EINDSTAND / STATISTIEKEN
+       - Finale klassement
+       - Persoonlijke statistieken
+       - Global records
+  ═══════════════════════════════════════════════ -->
+  <main id="view-stats" class="view">
+    <div class="view-container">
+      <!-- Eindstand (alleen na afgerond spel) -->
+      <section id="final-results-section" style="display:none;">
+        <h1 class="view-title">🏆 Eindstand</h1>
+        <div id="final-podium" class="podium-container"></div>
+        <div id="final-scores-list" class="final-scores-list"></div>
+        <div class="action-row">
+          <button id="btn-new-game" class="btn btn-gold btn-large">Nieuw Spel</button>
+        </div>
+        <hr class="divider" />
+      </section>
+
+      <!-- Globale statistieken sectie -->
+      <h2 class="view-title">📊 Statistieken & Records</h2>
+
+      <!-- Speler filter -->
+      <section class="card-panel">
+        <h3 class="panel-title">Persoonlijk Dashboard</h3>
+        <div class="search-row">
+          <div class="search-input-wrap">
+            <input type="text" id="stats-player-search" class="search-input" placeholder="Zoek speler…" autocomplete="off" />
+            <div id="stats-autocomplete" class="autocomplete-dropdown" role="listbox"></div>
+          </div>
+        </div>
+        <div id="player-stats-dashboard" class="stats-dashboard" style="display:none;"></div>
+      </section>
+
+      <!-- Global records -->
+      <section class="card-panel">
+        <h3 class="panel-title">🌍 Globale Records</h3>
+        <div id="global-records-container" class="records-grid">
+          <div class="loading-records">Records laden…</div>
+        </div>
+      </section>
+
+      <div class="action-row">
+        <button id="btn-stats-to-lobby" class="btn btn-ghost">← Terug naar Lobby</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ═══════════════════════════════════════════════
+       INLINE EDIT MODAL
+  ═══════════════════════════════════════════════ -->
+  <div id="edit-modal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
+    <div class="modal-box">
+      <h2 class="modal-title" id="edit-modal-title">Corrigeer waarde</h2>
+      <p id="edit-modal-desc" class="modal-desc"></p>
+      <div class="modal-input-row">
+        <button class="modal-num-btn" id="edit-dec">−</button>
+        <input type="number" id="edit-value-input" class="modal-value-input" min="0" />
+        <button class="modal-num-btn" id="edit-inc">+</button>
+      </div>
+      <p id="edit-modal-warning" class="modal-warning" style="display:none;"></p>
+      <div class="modal-actions">
+        <button id="edit-modal-cancel" class="btn btn-ghost">Annuleren</button>
+        <button id="edit-modal-save" class="btn btn-gold">Opslaan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       FIREBASE SDK (V9 compat via CDN)
+  ═══════════════════════════════════════════════ -->
+  <script type="module">
+    import { initApp } from './game-logic.js';
+    initApp();
+  </script>
+</body>
+</html>
